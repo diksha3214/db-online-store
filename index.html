@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DB Online Store - Fresh Groceries</title>
+    <style>
+        * {margin: 0; padding: 0; box-sizing: border-box;}
+        body {font-family: 'Segoe UI', sans-serif; background: #f5f5f5;}
+        
+        /* Login Screen */
+        .login-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #2e7d32, #1b5e20);
+            display: flex; justify-content: center; align-items: center; z-index: 1000;
+        }
+        .login-box {
+            background: white; padding: 2rem; border-radius: 15px; width: 90%; max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        .login-box h2 {text-align: center; color: #2e7d32; margin-bottom: 1.5rem;}
+        .login-box input, .login-box select {
+            width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 5px;
+        }
+        .login-box button {
+            width: 100%; padding: 12px; background: #2e7d32; color: white; border: none;
+            border-radius: 5px; font-size: 1rem; cursor: pointer; margin-top: 10px;
+        }
+        .hidden {display: none !important;}
+
+        /* Header */
+        header {
+            background: #2e7d32; color: white; padding: 1rem 5%;
+            display: flex; justify-content: space-between; align-items: center;
+            position: sticky; top: 0; z-index: 100;
+        }
+        .logo {font-size: 1.8rem; font-weight: bold;}
+        .logo span {color: #ffd54f;}
+        .search-bar {flex: 1; margin: 0 2rem;}
+        .search-bar input {
+            width: 100%; padding: 10px; border: none; border-radius: 25px;
+        }
+        .header-btns {display: flex; gap: 10px; align-items: center;}
+        .header-btns button {
+            background: #ffd54f; color: #2e7d32; border: none;
+            padding: 10px 20px; border-radius: 25px; cursor: pointer;
+            font-weight: bold; position: relative;
+        }
+        #cartCount {
+            background: red; color: white; border-radius: 50%;
+            padding: 2px 6px; font-size: 12px; position: absolute;
+            top: -5px; right: -5px;
+        }
+        .user-info {font-size: 0.9rem; margin-right: 10px;}
+
+        /* Filters */
+        .filters {
+            background: white; padding: 1rem 5%; display: flex;
+            gap: 1rem; flex-wrap: wrap; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .filters button {
+            padding: 8px 16px; border: 1px solid #2e7d32; background: white;
+            color: #2e7d32; border-radius: 20px; cursor: pointer;
+        }
+        .filters button.active {background: #2e7d32; color: white;}
+
+        /* Products Grid */
+        .container {padding: 2rem 5%;}
+        .products {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+        .product {
+            background: white; border-radius: 10px; overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: 0.3s;
+        }
+        .product:hover {transform: translateY(-5px);}
+        .product img {width: 100%; height: 200px; object-fit: cover;}
+        .product-info {padding: 1rem;}
+        .product h3 {margin-bottom: 0.5rem; font-size: 1.1rem;}
+        .product .price {color: #2e7d32; font-size: 1.3rem; font-weight: bold;}
+        .product .unit {color: #666; font-size: 0.9rem;}
+        .stock {font-size: 0.85rem; color: #666; margin: 5px 0;}
+        .stock.low {color: #d32f2f; font-weight: bold;}
+        .add-btn {
+            width: 100%; padding: 10px; background: #2e7d32; color: white;
+            border: none; border-radius: 5px; margin-top: 10px; cursor: pointer;
+            font-weight: bold;
+        }
+        .add-btn:disabled {background: #ccc; cursor: not-allowed;}
+        .add-btn:hover:not(:disabled) {background: #1b5e20;}
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed; right: -450px; top: 0; width: 450px; height: 100%;
+            background: white; box-shadow: -2px 0 10px rgba(0,0,0,0.2);
+            transition: 0.3s; z-index: 200; display: flex; flex-direction: column;
+        }
+        .sidebar.open {right: 0;}
+        .sidebar-header {
+            background: #2e7d32; color: white; padding: 1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .sidebar-content {flex: 1; overflow-y: auto; padding: 1rem;}
+        .cart-item, .order-item, .admin-item {
+            display: flex; gap: 1rem; margin-bottom: 1rem; padding-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        .cart-item img {width: 60px; height: 60px; object-fit: cover; border-radius: 5px;}
+        .cart-item-info, .order-info {flex: 1;}
+        .qty-control {display: flex; gap: 10px; align-items: center; margin-top: 5px;}
+        .qty-control button {
+            width: 25px; height: 25px; border: 1px solid #ccc; background: white;
+            cursor: pointer; border-radius: 3px;
+        }
+        .sidebar-footer {padding: 1rem; border-top: 2px solid #eee;}
+        .total {display: flex; justify-content: space-between; font-size: 1.3rem; margin-bottom: 1rem;}
+        .checkout-btn {
+            width: 100%; padding: 15px; background: #ff6f00; color: white;
+            border: none; border-radius: 5px; font-size: 1.1rem; cursor: pointer;
+        }
+        .close-btn {background: none; border: none; color: white; font-size: 1.5rem; cursor: pointer;}
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); display: none; z-index: 150;
+        }
+        .overlay.show {display: block;}
+        
+        /* Payment Methods */
+        .payment-methods {margin: 1rem 0;}
+        .payment-methods label {
+            display: block; padding: 10px; border: 1px solid #ddd; border-radius: 5px;
+            margin: 5px 0; cursor: pointer;
+        }
+        .payment-methods input {margin-right: 10px;}
+
+        /* Status */
+        .status {padding: 4px 10px; border-radius: 12px; font-size: 12px; display: inline-block;}
+        .status.pending {background: #fff3cd; color: #856404;}
+        .status.assigned {background: #cce5ff; color: #004085;}
+        .status.out {background: #d1ecf1; color: #0c5460;}
+        .status.delivered {background: #d4edda; color: #155724;}
+        
+        .delivery-boy {
+            background: #f8f9fa; padding: 10px; border-radius: 5px; margin-top: 8px;
+        }
+        .delivery-boy strong {color: #2e7d32;}
+
+        /* Shopkeeper Panel */
+        .admin-panel {background: #fff3cd; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;}
+        .admin-panel h4 {color: #856404; margin-bottom: 10px;}
+        .admin-panel input, .admin-panel select {
+            width: 100%; padding: 8px; margin: 5px 0; border: 1px solid #ddd; border-radius: 3px;
+        }
+        .admin-panel button {
+            width: 100%; padding: 8px; background: #2e7d32; color: white;
+            border: none; border-radius: 3px; cursor: pointer; margin-top: 5px;
+        }
+        .sales-summary {
+            background: #e8f5e9; padding: 1rem; border-radius: 5px; margin-bottom: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {width: 100%; right: -100%;}
+            .search-bar {display: none;}
+            .header-btns {flex-wrap: wrap;}
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h2>DB Online Store</h2>
+            <select id="userRole">
+                <option value="customer">Customer</option>
+                <option value="shopkeeper">Shopkeeper</option>
+                <option value="delivery">Delivery Boy</option>
+            </select>
+            <input type="text" id="username" placeholder="Enter Name" required>
+            <input type="tel" id="phone" placeholder="Enter Phone" required>
+            <button onclick="login()">Login</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <header>
+            <div class="logo">DB <span>Online Store</span></div>
+            <div class="search-bar">
+                <input type="text" id="searchInput" placeholder="Search for fruits, vegetables, dairy...">
+            </div>
+            <div class="header-btns">
+                <span class="user-info" id="userInfo"></span>
+                <button onclick="toggleOrders()">📦 Orders</button>
+                <button onclick="toggleAdmin()" id="adminBtn" class="hidden">⚙️ Panel</button>
+                <button onclick="toggleCart()">
+                    🛒 Cart <span id="cartCount">0</span>
+                </button>
+                <button onclick="logout()">Logout</button>
+            </div>
+        </header>
+
+        <div class="filters">
+            <button class="active" onclick="filterProducts('all')">All</button>
+            <button onclick="filterProducts('fruits')">Fruits</button>
+            <button onclick="filterProducts('vegetables')">Vegetables</button>
+            <button onclick="filterProducts('dairy')">Dairy</button>
+            <button onclick="filterProducts('snacks')">Snacks</button>
+        </div>
+
+        <div class="container">
+            <div class="products" id="products"></div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay" onclick="closeAllSidebars()"></div>
+    
+    <!-- Cart Sidebar -->
+    <div class="sidebar" id="cartSidebar">
+        <div class="sidebar-header">
+            <h2>Your Cart</h2>
+            <button class="close-btn" onclick="toggleCart()">×</button>
+        </div>
+        <div class="sidebar-content" id="cartItems"></div>
+        <div class="sidebar-footer">
+            <div class="total">
+                <span>Total:</span>
+                <span>₹<span id="cartTotal">0</span></span>
+            </div>
+            <input type="text" id="addressInput" placeholder="Delivery address" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:5px;">
+            <div class="payment-methods">
+                <strong>Payment Method:</strong>
+                <label><input type="radio" name="payment" value="COD" checked> Cash on Delivery</label>
+                <label><input type="radio" name="payment" value="UPI"> UPI / Paytm</label>
+                <label><input type="radio" name="payment" value="Card"> Credit/Debit Card</label>
+            </div>
+            <button class="checkout-btn" onclick="checkout()">Place Order</button>
+        </div>
+    </div>
+
+    <!-- Orders Sidebar -->
+    <div class="sidebar" id="ordersSidebar">
+        <div class="sidebar-header">
+            <h2 id="ordersTitle">My Orders</h2>
+            <button class="close-btn" onclick="toggleOrders()">×</button>
+        </div>
+        <div class="sidebar-content" id="ordersList"></div>
+    </div>
+
+    <!-- Admin/Shopkeeper Panel -->
+    <div class="sidebar" id="adminSidebar">
+        <div class="sidebar-header">
+            <h2>Shopkeeper Panel</h2>
+            <button class="close-btn" onclick="toggleAdmin()">×</button>
+        </div>
+        <div class="sidebar-content">
+            <div class="sales-summary">
+                <h4>📊 Today's Summary</h4>
+                <p>Total Orders: <strong id="totalOrders">0</strong></p>
+                <p>Total Sales: <strong>₹<span id="totalSales">0</span></strong></p>
+            </div>
+            <div class="admin-panel">
+                <h4>Add New Product</h4>
+                <input type="text" id="newProdName" placeholder="Product Name">
+                <input type="number" id="newProdPrice" placeholder="Price">
+                <input type="number" id="newProdStock" placeholder="Stock Qty">
+                <select id="newProdCat">
+                    <option value="fruits">Fruits</option>
+                    <option value="vegetables">Vegetables</option>
+                    <option value="dairy">Dairy</option>
+                    <option value="snacks">Snacks</option>
+                </select>
+                <input type="text" id="newProdImg" placeholder="Image URL">
+                <button onclick="addProduct()">Add Product</button>
+            </div>
+            <div class="admin-panel">
+                <h4>Update Stock</h4>
+                <select id="stockProdSelect"></select>
+                <input type="number" id="stockQty" placeholder="New Stock Qty">
+                <button onclick="updateStock()">Update Stock</button>
+            </div>
+            <div id="allOrdersList"></div>
+        </div>
+    </div>
+
+    <script>
+        let products = [
+            {id: 1, name: "Fresh Apples", price: 120, unit: "1 kg", category: "fruits", img: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400", stock: 50},
+            {id: 2, name: "Banana", price: 60, unit: "1 dozen", category: "fruits", img: "https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=400", stock: 100},
+            {id: 3, name: "Tomatoes", price: 40, unit: "1 kg", category: "vegetables", img: "https://images.unsplash.com/photo-1582284540020-8acbe03f4924?w=400", stock: 80},
+            {id: 4, name: "Onion", price: 35, unit: "1 kg", category: "vegetables", img: "https://images.unsplash.com/photo-1508747703725-719777637510?w=400", stock: 120},
+            {id: 5, name: "Amul Milk", price: 60, unit: "1 L", category: "dairy", img: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400", stock: 60},
+            
+            {id: 7, name: "Lays Chips", price: 20, unit: "1 pack", category: "snacks", img: "https://images.unsplash.com/photo-1566478989037-eec170784d0b?w=400", stock: 200},
+            {id: 8, name: "Orange", price: 90, unit: "1 kg", category: "fruits", img: "https://images.unsplash.com/photo-1547514701-42782101795e?w=400", stock: 70}
+        ];
+
+        const deliveryBoys = [
+            {name: "darshan", phone: "9876543210", vehicle: "Bike", status: "available"},
+            {name: "bhupesh", phone: "9876543211", vehicle: "Scooter", status: "available"},
+            {name: "fazlu", phone: "9876543212", vehicle: "Bike", status: "available"}
+        ];
+
+        let cart = [];
+        let orders = [];
+        let currentFilter = 'all';
+        let orderIdCounter = 1001;
+        let currentUser = null;
+
+        function login() {
+            const role = document.getElementById('userRole').value;
+            const name = document.getElementById('username').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            
+            if(!name || !phone) {
+                alert('Please enter name and phone');
+                return;
+            }
+            
+            currentUser = {role, name, phone};
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('userInfo').textContent = `${name} (${role})`;
+            
+            if(role === 'shopkeeper') {
+                document.getElementById('adminBtn').classList.remove('hidden');
+            }
+            if(role === 'delivery') {
+                document.getElementById('ordersTitle').textContent = 'Assigned Deliveries';
+            }
+            
+            displayProducts();
+            updateCart();
+        }
+
+        function logout() {
+            currentUser = null;
+            cart = [];
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('adminBtn').classList.add('hidden');
+        }
+
+        function displayProducts() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = products.filter(p => {
+                const matchCategory = currentFilter === 'all' || p.category === currentFilter;
+                const matchSearch = p.name.toLowerCase().includes(searchTerm);
+                return matchCategory && matchSearch;
+            });
+
+            document.getElementById('products').innerHTML = filtered.map(p => `
+                <div class="product">
+                    <img src="${p.img}" alt="${p.name}">
+                    <div class="product-info">
+                        <h3>${p.name}</h3>
+                        <p class="unit">${p.unit}</p>
+                        <p class="price">₹${p.price}</p>
+                        <p class="stock ${p.stock < 10 ? 'low' : ''}">Stock: ${p.stock} ${p.stock < 10 ? '(Low)' : ''}</p>
+                        <button class="add-btn" onclick="addToCart(${p.id})" ${p.stock === 0 ? 'disabled' : ''}>
+                            ${p.stock === 0 ? 'Out of Stock' : 'Add to Cart'}
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            updateStockDropdown();
+        }
+
+        function addToCart(id) {
+            if(currentUser.role !== 'customer') {
+                alert('Only customers can add to cart');
+                return;
+            }
+            const product = products.find(p => p.id === id);
+            if(product.stock === 0) return;
+            
+            const item = cart.find(i => i.id === id);
+            if(item) {
+                if(item.qty < product.stock) item.qty++;
+                else alert('Max stock reached');
+            } else {
+                cart.push({...product, qty: 1});
+            }
+            updateCart();
+        }
+
+        function updateCart() {
+            const cartItems = document.getElementById('cartItems');
+            const cartCount = document.getElementById('cartCount');
+            const cartTotal = document.getElementById('cartTotal');
+
+            if(cart.length === 0) {
+                cartItems.innerHTML = '<p style="text-align:center; color:#666; margin-top:2rem;">Your cart is empty</p>';
+            } else {
+                cartItems.innerHTML = cart.map(item => `
+                    <div class="cart-item">
+                        <img src="${item.img}" alt="${item.name}">
+                        <div class="cart-item-info">
+                            <h4>${item.name}</h4>
+                            <p>₹${item.price} × ${item.qty} = ₹${item.price * item.qty}</p>
+                            <div class="qty-control">
+                                <button onclick="changeQty(${item.id}, -1)">-</button>
+                                <span>${item.qty}</span>
+                                <button onclick="changeQty(${item.id}, 1)">+</button>
+                                <button onclick="removeItem(${item.id})" style="margin-left:auto; color:red;">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+            const count = cart.reduce((sum, item) => sum + item.qty, 0);
+            cartCount.textContent = count;
+            cartTotal.textContent = total;
+        }
+
+        function changeQty(id, change) {
+            const item = cart.find(i => i.id === id);
+            const product = products.find(p => p.id === id);
+            if(item) {
+                const newQty = item.qty + change;
+                if(newQty <= 0) removeItem(id);
+                else if(newQty > product.stock) alert('Not enough stock');
+                else { item.qty = newQty; updateCart(); }
+            }
+        }
+
+        function removeItem(id) {
+            cart = cart.filter(i => i.id !== id);
+            updateCart();
+        }
+
+        function toggleCart() {
+            closeAllSidebars();
+            document.getElementById('cartSidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('show');
+        }
+
+        function toggleOrders() {
+            closeAllSidebars();
+            document.getElementById('ordersSidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('show');
+            displayOrders();
+        }
+
+        function toggleAdmin() {
+            closeAllSidebars();
+            document.getElementById('adminSidebar').classList.add('open');
+            document.getElementById('overlay').classList.add('show');
+            updateAdminPanel();
+        }
+
+        function closeAllSidebars() {
+            document.querySelectorAll('.sidebar').forEach(s => s.classList.remove('open'));
+            document.getElementById('overlay').classList.remove('show');
+        }
+
+        function filterProducts(cat) {
+            currentFilter = cat;
+            document.querySelectorAll('.filters button').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            displayProducts();
+        }
+
+        function checkout() {
+            if(cart.length === 0) {
+                alert('Cart is empty!');
+                return;
+            }
+            const address = document.getElementById('addressInput').value.trim();
+            if(!address) {
+                alert('Please enter delivery address!');
+                return;
+            }
+            const payment = document.querySelector('input[name="payment"]:checked').value;
+
+            // Reduce stock
+            cart.forEach(item => {
+                const prod = products.find(p => p.id === item.id);
+                prod.stock -= item.qty;
+            });
+
+            const availableBoys = deliveryBoys.filter(b => b.status === 'available');
+            const deliveryBoy = availableBoys.length > 0 ? availableBoys[0] : deliveryBoys[0];
+            deliveryBoy.status = 'busy';
+
+            const order = {
+                id: orderIdCounter++,
+                customer: currentUser.name,
+                customerPhone: currentUser.phone,
+                items: [...cart],
+                total: cart.reduce((s,i) => s+i.price*i.qty, 0),
+                address: address,
+                payment: payment,
+                status: 'assigned',
+                deliveryBoy: deliveryBoy,
+                time: new Date().toLocaleString(),
+                eta: '30-40 mins'
+            };
+            
+            orders.unshift(order);
+            cart = [];
+            document.getElementById('addressInput').value = '';
+            updateCart();
+            displayProducts();
+            closeAllSidebars();
+            
+            alert(`Order #${order.id} placed!\nPayment: ${payment}\nDelivery by: ${deliveryBoy.name}\nETA: ${order.eta}`);
+            
+            setTimeout(() => updateOrderStatus(order.id, 'out'), 10000);
+            setTimeout(() => {
+                updateOrderStatus(order.id, 'delivered');
+                deliveryBoy.status = 'available';
+            }, 25000);
+        }
+
+        function updateOrderStatus(orderId, newStatus) {
+            const order = orders.find(o => o.id === orderId);
+            if(order) order.status = newStatus;
+            if(document.getElementById('ordersSidebar').classList.contains('open')) displayOrders();
+            if(document.getElementById('adminSidebar').classList.contains('open')) updateAdminPanel();
+        }
+
+        function displayOrders() {
+            const ordersList = document.getElementById('ordersList');
+            let ordersToShow = [];
+            
+            if(currentUser.role === 'customer') {
+                ordersToShow = orders.filter(o => o.customerPhone === currentUser.phone);
+            } else if(currentUser.role === 'delivery') {
+                ordersToShow = orders.filter(o => o.deliveryBoy.phone === currentUser.phone && o.status !== 'delivered');
+            } else {
+                ordersToShow = orders;
+            }
+            
+            if(ordersToShow.length === 0) {
+                ordersList.innerHTML = '<p style="text-align:center; color:#666; margin-top:2rem;">No orders</p>';
+                return;
+            }
+            
+            ordersList.innerHTML = ordersToShow.map(order => `
+                <div class="order-item">
+                    <div class="order-info">
+                        <h4>Order #${order.id}</h4>
+                        <p style="font-size:12px; color:#666;">${order.time}</p>
+                        <p>Customer: ${order.customer} - ${order.customerPhone}</p>
+                        <p style="margin:5px 0;">Total: ₹${order.total} | Payment: ${order.payment}</p>
+                        <p style="font-size:13px;">📍 ${order.address}</p>
+                        <span class="status ${order.status}">
+                            ${order.status === 'assigned' ? 'Assigned' : 
+                              order.status === 'out' ? 'Out for Delivery' : 
+                              order.status === 'delivered' ? 'Delivered' : 'Pending'}
+                        </span>
+                        <div class="delivery-boy">
+                            <strong>🚚 ${order.deliveryBoy.name}</strong><br>
+                            📞 ${order.deliveryBoy.phone} | ${order.deliveryBoy.vehicle}<br>
+                            ${order.status !== 'delivered' ? `⏱️ ETA: ${order.eta}` : '✅ Delivered'}
+                        </div>
+                        ${currentUser.role === 'delivery' && order.status === 'assigned' ? 
+                            `<button onclick="markOutForDelivery(${order.id})" style="width:100%; padding:8px; margin-top:10px; background:#2e7d32; color:white; border:none; border-radius:3px; cursor:pointer;">Mark Out for Delivery</button>` : ''}
+                        ${currentUser.role === 'delivery' && order.status === 'out' ? 
+                            `<button onclick="markDelivered(${order.id})" style="width:100%; padding:8px; margin-top:10px; background:#2e7d32; color:white; border:none; border-radius:3px; cursor:pointer;">Mark Delivered</button>` : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function markOutForDelivery(orderId) {
+            updateOrderStatus(orderId, 'out');
+        }
+
+        function markDelivered(orderId) {
+            updateOrderStatus(orderId, 'delivered');
+            const order = orders.find(o => o.id === orderId);
+            if(order) order.deliveryBoy.status = 'available';
+        }
+
+        // Shopkeeper Functions
+        function updateAdminPanel() {
+            const totalSales = orders.reduce((sum, o) => sum + o.total, 0);
+            document.getElementById('totalOrders').textContent = orders.length;
+            document.getElementById('totalSales').textContent = totalSales;
+            
+            document.getElementById('allOrdersList').innerHTML = '<h4 style="margin-top:1rem;">All Orders</h4>' + 
+                orders.map(order => `
+                    <div class="admin-item">
+                        <div>
+                            <strong>#${order.id}</strong> - ${order.customer}<br>
+                            ₹${order.total} | ${order.payment} | <span class="status ${order.status}">${order.status}</span>
+                        </div>
+                    </div>
+                `).join('');
+        }
+
+        function updateStockDropdown() {
+            document.getElementById('stockProdSelect').innerHTML = products.map(p => 
+                `<option value="${p.id}">${p.name} - Current: ${p.stock}</option>`
+            ).join('');
+        }
+
+        function addProduct() {
+            const name = document.getElementById('newProdName').value.trim();
+            const price = parseInt(document.getElementById('newProdPrice').value);
+            const stock = parseInt(document.getElementById('newProdStock').value);
+            const cat = document.getElementById('newProdCat').value;
+            const img = document.getElementById('newProdImg').value.trim() || 'https://via.placeholder.com/400';
+            
+            if(!name || !price || !stock) {
+                alert('Fill all fields');
+                return;
+            }
+            
+            const newId = Math.max(...products.map(p => p.id)) + 1;
+            products.push({id: newId, name, price, unit: "1 unit", category: cat, img, stock});
+            
+            document.getElementById('newProdName').value = '';
+            document.getElementById('newProdPrice').value = '';
+            document.getElementById('newProdStock').value = '';
+            document.getElementById('newProdImg').value = '';
+            
+            alert('Product added!');
+            displayProducts();
+        }
+
+        function updateStock() {
+            const prodId = parseInt(document.getElementById('stockProdSelect').value);
+            const newStock = parseInt(document.getElementById('stockQty').value);
+            const prod = products.find(p => p.id === prodId);
+            prod.stock = newStock;
+            alert('Stock updated!');
+            displayProducts();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', displayProducts);
+        
+        displayProducts();
+        updateCart();
+    </script>
+</body>
+</html>
